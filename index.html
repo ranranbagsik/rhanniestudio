@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rhannie's Studio — 100% Free Unlimited Video Background Remover</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- MediaPipe Selfie Segmentation (Client-side AI) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- External Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            studio: {
+              950: '#09090b',
+              900: '#121216',
+              800: '#1c1c22',
+              700: '#272730',
+              600: '#3f3f4c',
+            },
+            brand: {
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+            }
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-studio-950 text-zinc-100 font-sans antialiased min-h-screen flex flex-col selection:bg-brand-500 selection:text-studio-950">
+
+  <!-- Top Mission & Navigation Header -->
+  <header class="border-b border-studio-800 bg-studio-900/90 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <!-- Brand Identity -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-teal-600 flex items-center justify-center shadow-lg shadow-brand-500/20 text-studio-950 font-extrabold">
+          <i data-lucide="scissors" class="w-5 h-5 stroke-[2.5]"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-lg tracking-tight text-white">Rhannie's <span class="text-brand-400">Studio</span></h1>
+            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/15 text-brand-400 border border-brand-500/30">
+              OPEN ACCESS
+            </span>
+          </div>
+          <p class="text-xs text-zinc-400">Free &amp; Open Video Background Remover for Everyone</p>
+        </div>
+      </div>
+
+      <!-- Mission Pillar Badge -->
+      <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-studio-800/90 border border-studio-700 text-xs font-medium text-zinc-200 shadow-inner">
+        <span class="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
+        <span>100% Free Forever • No Subscriptions • Unlimited Video Length • Runs Locally in Your Browser</span>
+      </div>
+
+      <!-- Engine Status Pill -->
+      <div class="flex items-center gap-2">
+        <div id="aiStatusBadge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-studio-800 border border-studio-700 text-xs font-mono text-zinc-300">
+          <i data-lucide="cpu" class="w-3.5 h-3.5 text-amber-400 animate-spin" id="aiStatusIcon"></i>
+          <span id="aiStatusText">Initializing Local AI...</span>
+        </div>
+        <button id="changeVideoBtn" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-lg bg-studio-800 hover:bg-studio-700 border border-studio-700 text-xs font-medium text-zinc-200 transition">
+          <i data-lucide="folder-open" class="w-3.5 h-3.5 text-brand-400"></i>
+          <span>New Video</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Toast Banner -->
+  <div id="toastBanner" class="fixed bottom-5 right-5 z-50 hidden max-w-md bg-studio-800 border border-studio-600 text-zinc-100 px-4 py-3 rounded-xl shadow-2xl flex items-start gap-3 transition-all">
+    <i data-lucide="info" id="toastIcon" class="w-5 h-5 text-brand-400 shrink-0 mt-0.5"></i>
+    <div class="text-sm leading-snug" id="toastMessage">Message</div>
+    <button onclick="hideToast()" class="text-zinc-400 hover:text-white ml-2">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+  </div>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 flex flex-col lg:flex-row gap-6">
+
+    <!-- LEFT / CENTER: Video Viewport & Timeline Stage -->
+    <section class="flex-1 flex flex-col min-w-0 gap-4">
+
+      <!-- Metadata Bar -->
+      <div id="metadataBar" class="hidden flex-wrap items-center justify-between gap-3 bg-studio-900 border border-studio-800 rounded-xl px-4 py-2.5 text-xs">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <i data-lucide="film" class="w-4 h-4 text-brand-400 shrink-0"></i>
+          <span id="metaFilename" class="font-semibold text-zinc-100 truncate max-w-[220px] sm:max-w-xs">video.mp4</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 sm:gap-5 font-mono text-zinc-400">
+          <span class="flex items-center gap-1"><i data-lucide="maximize" class="w-3.5 h-3.5 text-zinc-500"></i> <span id="metaResolution">1920×1080</span></span>
+          <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-zinc-500"></i> <span id="metaDuration">00:00</span></span>
+          <span class="flex items-center gap-1"><i data-lucide="hard-drive" class="w-3.5 h-3.5 text-zinc-500"></i> <span id="metaSize">0 MB</span></span>
+        </div>
+      </div>
+
+      <!-- Canvas Viewport Stage -->
+      <div class="relative flex-1 min-h-[380px] sm:min-h-[480px] lg:min-h-[560px] rounded-2xl border border-studio-800 bg-studio-900 overflow-hidden flex flex-col shadow-2xl">
+
+        <!-- Dropzone Overlay -->
+        <div id="dropzone" class="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all bg-studio-900 hover:bg-studio-800/70">
+          <input type="file" id="fileInput" accept="video/*,.mkv,.avi,.mov,.flv,.wmv,.webm,.mp4,.m4v,.3gp,.ogv" class="hidden" />
+          <div class="w-20 h-20 rounded-2xl bg-studio-800 border border-studio-700 flex items-center justify-center mb-5 shadow-xl group-hover:scale-105 transition">
+            <i data-lucide="upload-cloud" class="w-10 h-10 text-brand-400"></i>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-bold text-white mb-2">Drop any video here to remove its background</h2>
+          <p class="text-sm text-zinc-400 max-w-lg mb-6 leading-relaxed">
+            Supports short clips or multi-hour long-form videos across <span class="text-zinc-200 font-medium">MP4, WebM, MOV, AVI, MKV</span> and more. Zero uploads—your video never leaves your device.
+          </p>
+          <button type="button" id="selectFileBtn" class="px-6 py-3 rounded-xl bg-brand-500 hover:bg-brand-400 text-studio-950 font-bold text-sm shadow-lg shadow-brand-500/25 transition flex items-center gap-2">
+            <i data-lucide="video" class="w-4 h-4"></i>
+            <span>Choose Video File</span>
+          </button>
+          <div class="mt-6 flex flex-wrap justify-center gap-2 text-[11px] font-mono text-zinc-400">
+            <span class="px-2.5 py-1 rounded-md bg-studio-800 border border-studio-700">✓ Alpha Transparent WebM</span>
+            <span class="px-2.5 py-1 rounded-md bg-studio-800 border border-studio-700">✓ Chroma Green Screen</span>
+            <span class="px-2.5 py-1 rounded-md bg-studio-800 border border-studio-700">✓ Original Audio Kept</span>
+            <span class="px-2.5 py-1 rounded-md bg-studio-800 border border-studio-700">✓ No Watermarks</span>
+          </div>
+        </div>
+
+        <!-- Viewport Top Toolbar -->
+        <div id="viewportToolbar" class="hidden items-center justify-between px-4 py-2.5 bg-studio-950/80 border-b border-studio-800 z-10 backdrop-blur-sm">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Preview View:</span>
+            <div class="inline-flex rounded-lg bg-studio-800 p-0.5 border border-studio-700">
+              <button type="button" data-view="processed" class="view-mode-btn px-2.5 py-1 rounded-md text-xs font-medium bg-brand-500 text-studio-950 shadow">
+                Removed BG
+              </button>
+              <button type="button" data-view="split" class="view-mode-btn px-2.5 py-1 rounded-md text-xs font-medium text-zinc-300 hover:text-white">
+                Split Compare
+              </button>
+              <button type="button" data-view="original" class="view-mode-btn px-2.5 py-1 rounded-md text-xs font-medium text-zinc-300 hover:text-white">
+                Original
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 text-xs text-zinc-400 font-mono">
+            <span id="fpsCounter" class="hidden sm:inline">Preview: -- FPS</span>
+            <span id="activeBgBadge" class="px-2 py-0.5 rounded bg-studio-800 border border-studio-700 text-brand-400">Alpha Transparent</span>
+          </div>
+        </div>
+
+        <!-- Interactive Render Canvas Area -->
+        <div id="canvasWrapper" class="relative flex-1 checkerboard-bg flex items-center justify-center overflow-hidden p-3">
+          <video id="sourceVideo" playsinline crossorigin="anonymous" class="hidden"></video>
+          <canvas id="maskCanvas" class="hidden"></canvas>
+          <canvas id="compositeCanvas" class="hidden"></canvas>
+          <canvas id="displayCanvas" class="max-w-full max-h-[540px] rounded-lg shadow-2xl object-contain"></canvas>
+
+          <!-- Split Screen Divider Handle -->
+          <div id="splitSliderOverlay" class="hidden absolute inset-0 pointer-events-none">
+            <input type="range" id="splitRange" min="0" max="100" value="50" aria-label="Split comparison slider"
+              class="pointer-events-auto absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-20" />
+            <div id="splitLine" class="absolute top-0 bottom-0 left-1/2 w-0.5 bg-white shadow-[0_0_12px_rgba(0,0,0,0.9)] z-10">
+              <div class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-studio-900 border-2 border-white text-white flex items-center justify-center shadow-lg">
+                <i data-lucide="move-horizontal" class="w-4 h-4"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Exporting Overlay Modal -->
+          <div id="exportOverlay" class="hidden absolute inset-0 z-30 bg-studio-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+            <div class="w-full max-w-md bg-studio-900 border border-studio-700 rounded-2xl p-6 shadow-2xl">
+              <div class="w-12 h-12 rounded-xl bg-brand-500/15 border border-brand-500/30 text-brand-400 flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="loader-2" class="w-6 h-6 animate-spin"></i>
+              </div>
+              <h3 class="text-lg font-bold text-white mb-1">Rendering Background-Free Video</h3>
+              <p class="text-xs text-zinc-400 mb-5">Streaming frames directly to disk-backed chunks in real time so long videos never run out of memory.</p>
+
+              <div class="w-full bg-studio-800 rounded-full h-3 overflow-hidden mb-2 border border-studio-700">
+                <div id="exportProgressBar" class="bg-gradient-to-r from-brand-500 to-teal-400 h-full w-0 transition-all duration-150"></div>
+              </div>
+              <div class="flex justify-between text-xs font-mono text-zinc-300 mb-4">
+                <span id="exportPercent">0%</span>
+                <span id="exportTimeStats">00:00 / 00:00</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 text-left bg-studio-950/70 rounded-xl p-3 border border-studio-800 text-xs font-mono mb-5">
+                <div>
+                  <span class="text-zinc-500 block">Frames Processed</span>
+                  <span id="exportFrameCount" class="text-zinc-200 font-semibold">0</span>
+                </div>
+                <div>
+                  <span class="text-zinc-500 block">Est. Remaining</span>
+                  <span id="exportEta" class="text-brand-400 font-semibold">Calculating...</span>
+                </div>
+              </div>
+
+              <button type="button" id="cancelExportBtn" class="w-full py-2.5 px-4 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 font-semibold text-xs transition flex items-center justify-center gap-2">
+                <i data-lucide="square" class="w-3.5 h-3.5 fill-current"></i>
+                <span>Cancel Render</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Playback & Scrubber Bar -->
+        <div id="playbackControls" class="hidden bg-studio-950 border-t border-studio-800 px-4 py-3 flex flex-col gap-2">
+          <div class="flex items-center gap-3">
+            <span id="currentTimeLabel" class="text-xs font-mono text-zinc-400 w-12 text-right">00:00</span>
+            <input type="range" id="timelineScrubber" min="0" max="100" step="0.01" value="0" class="flex-1" />
+            <span id="totalTimeLabel" class="text-xs font-mono text-zinc-400 w-12">00:00</span>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" id="playPauseBtn" class="w-9 h-9 rounded-lg bg-brand-500 hover:bg-brand-400 text-studio-950 flex items-center justify-center font-bold transition shadow">
+                <i data-lucide="play" id="playPauseIcon" class="w-4 h-4 fill-current"></i>
+              </button>
+              <button type="button" id="stepBackBtn" title="Back 5 seconds" class="p-2 rounded-lg bg-studio-800 hover:bg-studio-700 text-zinc-300 transition">
+                <i data-lucide="rewind" class="w-4 h-4"></i>
+              </button>
+              <button type="button" id="stepForwardBtn" title="Forward 5 seconds" class="p-2 rounded-lg bg-studio-800 hover:bg-studio-700 text-zinc-300 transition">
+                <i data-lucide="fast-forward" class="w-4 h-4"></i>
+              </button>
+
+              <!-- Audio Monitoring Controls -->
+              <div class="flex items-center gap-2 bg-studio-800/90 border border-studio-700 rounded-lg px-2.5 py-1.5">
+                <button type="button" id="muteToggleBtn" title="Mute / Unmute Preview Speaker" class="text-zinc-200 hover:text-brand-400 transition">
+                  <i data-lucide="volume-2" id="muteIcon" class="w-4 h-4 text-brand-400"></i>
+                </button>
+                <input type="range" id="volumeSlider" min="0" max="100" value="100" title="Preview Speaker Volume" class="w-16 sm:w-20" />
+                <span id="audioStatusBadge" class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-studio-900 border border-studio-700 text-brand-400">
+                  Audio Active
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 text-xs text-zinc-400">
+              <span>Playback Speed:</span>
+              <select id="playbackRateSelect" class="bg-studio-800 border border-studio-700 rounded-lg px-2 py-1 text-zinc-200 font-mono text-xs focus:outline-none focus:border-brand-500">
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1.0x</option>
+                <option value="1.5">1.5x</option>
+                <option value="2">2.0x</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT SIDEBAR: Studio Controls & Export Panel -->
+    <aside class="w-full lg:w-[390px] shrink-0 flex flex-col gap-4">
+
+      <!-- Card 1: Background Replacement Mode -->
+      <div class="bg-studio-900 border border-studio-800 rounded-2xl p-5 shadow-xl">
+        <div class="flex items-center justify-between mb-3.5">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-2">
+            <i data-lucide="layers" class="w-4 h-4 text-brand-400"></i>
+            <span>Background Mode</span>
+          </h2>
+          <span class="text-[11px] font-mono text-zinc-500">OUTPUT TYPE</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 mb-4">
+          <button type="button" data-bg-mode="alpha" class="bg-mode-btn active flex flex-col items-start p-3 rounded-xl border-2 border-brand-500 bg-brand-500/10 text-left transition">
+            <div class="flex items-center justify-between w-full mb-1.5">
+              <span class="w-6 h-6 rounded-md checkerboard-bg border border-zinc-600 inline-block"></span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-brand-500 text-studio-950 font-bold">ALPHA</span>
+            </div>
+            <span class="text-xs font-bold text-white">Transparent</span>
+            <span class="text-[11px] text-zinc-400 mt-0.5">True Alpha WebM</span>
+          </button>
+
+          <button type="button" data-bg-mode="greenscreen" class="bg-mode-btn flex flex-col items-start p-3 rounded-xl border border-studio-700 bg-studio-800/60 hover:bg-studio-800 text-left transition">
+            <div class="flex items-center justify-between w-full mb-1.5">
+              <span class="w-6 h-6 rounded-md bg-[#00FF00] border border-emerald-300/40 inline-block"></span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-studio-700 text-zinc-300">CHROMA</span>
+            </div>
+            <span class="text-xs font-bold text-white">Green Screen</span>
+            <span class="text-[11px] text-zinc-400 mt-0.5">Studio #00FF00 Key</span>
+          </button>
+
+          <button type="button" data-bg-mode="color" class="bg-mode-btn flex flex-col items-start p-3 rounded-xl border border-studio-700 bg-studio-800/60 hover:bg-studio-800 text-left transition">
+            <div class="flex items-center justify-between w-full mb-1.5">
+              <span id="customColorSwatch" class="w-6 h-6 rounded-md bg-[#0044FF] border border-white/20 inline-block"></span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-studio-700 text-zinc-300">COLOR</span>
+            </div>
+            <span class="text-xs font-bold text-white">Custom Color</span>
+            <span class="text-[11px] text-zinc-400 mt-0.5">Blue Screen / Any Hex</span>
+          </button>
+
+          <button type="button" data-bg-mode="image" class="bg-mode-btn flex flex-col items-start p-3 rounded-xl border border-studio-700 bg-studio-800/60 hover:bg-studio-800 text-left transition">
+            <div class="flex items-center justify-between w-full mb-1.5">
+              <span class="w-6 h-6 rounded-md bg-studio-700 flex items-center justify-center text-zinc-300">
+                <i data-lucide="image" class="w-3.5 h-3.5"></i>
+              </span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-studio-700 text-zinc-300">IMAGE</span>
+            </div>
+            <span class="text-xs font-bold text-white">Custom Image</span>
+            <span class="text-[11px] text-zinc-400 mt-0.5">Virtual Backdrop</span>
+          </button>
+        </div>
+
+        <div id="chromaSubControls" class="hidden pt-3 border-t border-studio-800 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-zinc-400">Key Presets:</span>
+            <div class="flex items-center gap-1.5">
+              <button type="button" data-preset-color="#00FF00" class="preset-color-btn px-2 py-1 rounded bg-[#00FF00]/20 border border-[#00FF00]/50 text-[#00FF00] font-mono text-[11px] font-semibold">Green #00FF00</button>
+              <button type="button" data-preset-color="#0000FF" class="preset-color-btn px-2 py-1 rounded bg-blue-500/20 border border-blue-500/50 text-blue-400 font-mono text-[11px] font-semibold">Blue #0000FF</button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between gap-3 pt-1">
+            <label for="bgColorPicker" class="text-xs text-zinc-300">Custom Hex Color:</label>
+            <div class="flex items-center gap-2">
+              <input type="color" id="bgColorPicker" value="#00FF00" class="w-8 h-8 rounded cursor-pointer bg-transparent border-0" />
+              <input type="text" id="bgColorHexInput" value="#00FF00" maxlength="7" class="w-24 bg-studio-800 border border-studio-700 rounded-lg px-2.5 py-1 text-xs font-mono text-zinc-100 uppercase" />
+            </div>
+          </div>
+        </div>
+
+        <div id="imageSubControls" class="hidden pt-3 border-t border-studio-800">
+          <input type="file" id="bgImageInput" accept="image/*" class="hidden" />
+          <button type="button" id="uploadBgImageBtn" class="w-full py-2 px-3 rounded-xl bg-studio-800 hover:bg-studio-700 border border-dashed border-studio-600 text-xs font-medium text-zinc-200 flex items-center justify-center gap-2 transition">
+            <i data-lucide="image-plus" class="w-4 h-4 text-brand-400"></i>
+            <span id="bgImageLabel">Upload Background Image (JPG/PNG/WebP)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 2: AI Engine & Edge Refinement -->
+      <div class="bg-studio-900 border border-studio-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-2">
+            <i data-lucide="sliders" class="w-4 h-4 text-brand-400"></i>
+            <span>AI &amp; Edge Refinement</span>
+          </h2>
+          <button type="button" id="resetSlidersBtn" class="text-xs text-zinc-400 hover:text-brand-400 transition">Reset</button>
+        </div>
+
+        <div>
+          <label for="engineModeSelect" class="block text-xs font-medium text-zinc-400 mb-1.5">Segmentation Engine</label>
+          <select id="engineModeSelect" class="w-full bg-studio-800 border border-studio-700 rounded-xl px-3 py-2 text-xs text-zinc-100 focus:outline-none focus:border-brand-500">
+            <option value="ai_quality">AI Person/Subject Segmentation (High Precision)</option>
+            <option value="ai_fast">AI Person/Subject Segmentation (Fast / Long Videos)</option>
+            <option value="smart_fallback">Offline Smart Background Subtractor (No AI CDN Needed)</option>
+          </select>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-xs mb-1.5">
+            <span class="text-zinc-300 font-medium">Mask Threshold / Sensitivity</span>
+            <span id="thresholdVal" class="font-mono text-brand-400">50%</span>
+          </div>
+          <input type="range" id="thresholdSlider" min="10" max="90" value="50" class="w-full" />
+          <p class="text-[11px] text-zinc-500 mt-1">Higher values tighten subject boundaries; lower values keep fine details.</p>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-xs mb-1.5">
+            <span class="text-zinc-300 font-medium">Edge Feather / Softness</span>
+            <span id="featherVal" class="font-mono text-brand-400">3px</span>
+          </div>
+          <input type="range" id="featherSlider" min="0" max="15" value="3" class="w-full" />
+        </div>
+
+        <div>
+          <div class="flex justify-between text-xs mb-1.5">
+            <span class="text-zinc-300 font-medium">Edge Shrink / Halo Cleanup</span>
+            <span id="erodeVal" class="font-mono text-brand-400">1px</span>
+          </div>
+          <input type="range" id="erodeSlider" min="0" max="8" value="1" class="w-full" />
+        </div>
+      </div>
+
+      <!-- Card 3: Export & Download -->
+      <div class="bg-studio-900 border border-studio-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-2">
+            <i data-lucide="download" class="w-4 h-4 text-brand-400"></i>
+            <span>Export Video</span>
+          </h2>
+          <span class="text-[11px] font-mono text-brand-400">NO LIMITS</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label for="exportFormatSelect" class="block text-xs text-zinc-400 mb-1">Container / Codec</label>
+            <select id="exportFormatSelect" class="w-full bg-studio-800 border border-studio-700 rounded-xl px-2.5 py-2 text-xs text-zinc-100 focus:outline-none focus:border-brand-500">
+              <option value="auto_match" selected>Auto (Match Uploaded Format)</option>
+              <option value="webm_vp9">WebM (VP9 + Alpha)</option>
+              <option value="webm_vp8">WebM (VP8 + Alpha)</option>
+              <option value="mp4_h264">MP4 (H.264 / Green BG)</option>
+            </select>
+          </div>
+          <div>
+            <label for="exportQualitySelect" class="block text-xs text-zinc-400 mb-1">Bitrate Quality</label>
+            <select id="exportQualitySelect" class="w-full bg-studio-800 border border-studio-700 rounded-xl px-2.5 py-2 text-xs text-zinc-100 focus:outline-none focus:border-brand-500">
+              <option value="4000000">Standard (4 Mbps)</option>
+              <option value="8000000" selected>High HD (8 Mbps)</option>
+              <option value="16000000">Studio Ultra (16 Mbps)</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="flex items-center gap-2.5 text-xs text-zinc-300 cursor-pointer select-none">
+          <input type="checkbox" id="keepAudioCheckbox" checked class="w-4 h-4 rounded accent-brand-500 bg-studio-800 border-studio-600" />
+          <span>Preserve original video audio track</span>
+        </label>
+
+        <button type="button" id="startExportBtn" disabled class="w-full py-3.5 px-4 rounded-xl bg-brand-500 hover:bg-brand-400 disabled:bg-studio-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-studio-950 font-extrabold text-sm shadow-lg shadow-brand-500/20 transition flex items-center justify-center gap-2">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          <span>Remove Background &amp; Export</span>
+        </button>
+
+        <div id="downloadReadyCard" class="hidden p-3.5 rounded-xl bg-brand-500/10 border border-brand-500/40 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-brand-400 flex items-center gap-1.5">
+              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+              Render Complete!
+            </span>
+            <span id="outputFileInfo" class="text-[11px] font-mono text-zinc-300">0 MB • WEBM</span>
+          </div>
+          <a id="downloadLink" href="#" download="rhannies-studio-video.webm" class="w-full py-2.5 px-4 rounded-lg bg-brand-500 hover:bg-brand-400 text-studio-950 font-bold text-xs flex items-center justify-center gap-2 transition shadow">
+            <i data-lucide="download-cloud" class="w-4 h-4"></i>
+            <span>Download Processed Video</span>
+          </a>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-studio-800/80 py-4 px-6 text-center text-xs text-zinc-500">
+    Rhannie's Studio — Built with open web technologies to empower creators everywhere: zero paywalls, zero cloud uploads, 100% privacy-preserving local processing.
+  </footer>
+
+  <!-- External Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>
